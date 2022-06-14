@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mvc.forrest.dao.user.UserDAO">
+ 	
+	<resultMap id="userSelectMap" type="user">
+		<result property="userId"			column="userId"			jdbcType="VARCHAR"/>
+		<result property="password"			column="password"		jdbcType="VARCHAR"/>
+		<result property="nickname"			column="nickname"		jdbcType="VARCHAR"/>
+		<result property="userName"			column="userName"		jdbcType="VARCHAR"/>
+		<result property="userAddr"			column="userAddr"		jdbcType="VARCHAR"/>
+		<result property="phone"			column="phone"			jdbcType="VARCHAR"/>
+		<result property="role"				column="role"			jdbcType="VARCHAR"/>
+		<result property="joinDate"			column="joinDate"		jdbcType="TIMESTAMP"/>
+		<result property="joinPath"			column="joinPath"		jdbcType="VARCHAR"/>
+		<result property="userImg"			column="userImg"		jdbcType="VARCHAR"/>
+		<result property="recentDate"		column="recentDate"		jdbcType="TIMESTAMP"/>
+		<result property="pushToken"		column="pushToken"		jdbcType="VARCHAR"/>
+		<result	property="leaveApplyDate"	column="leaveApplyDate"	jdbcType="TIMESTAMP"/>
+		<result	property="leaveDate"		column="leaveDate"		jdbcType="TIMESTAMP"/>
+		<result	property="profit"			column="profit"			jdbcType="NUMERIC"/>
+		
+	</resultMap>
+	
+	<!-- SQL : INSERT -->
+	<insert 	id="addUser"		parameterType="User" >
+		INSERT 
+	 	INTO user(userId, password, nickname, userName, userAddr, phone, joinPath, joinDate, userImg)
+	 	VALUES (#{userId}, #{password}, #{nickname}, #{userName}, #{userAddr}, #{phone}, #{joinPath}, CURRENT_TIMESTAMP(), #{userImg})
+	 </insert>	 
+	 
+	 <!-- SQL : SELECT ONE -->
+	 <select 	id="getUser"	parameterType="String"	resultMap="userSelectMap">
+		SELECT
+		user.* , COALESCE(B.COUNT,0) AS 'reportedCount', COALESCE(C.COUNT,0) AS 'reviewedCount', profit, couponCount
+		FROM user
+		LEFT OUTER JOIN 	  	
+			(SELECT COUNT(*) COUNT, reportedUser FROM report Group by reportedUser) B 
+		ON user.userId = B.reportedUser
+		LEFT OUTER join
+			(SELECT COUNT(*) COUNT, reviewedUserId FROM oldreview Group by reviewedUserId) C 
+		ON user.userId = C.reviewedUserId
+		LEFT OUTER JOIN 	  	
+			(SELECT SUM(resultPrice)AS 'profit',userId FROM transaction GROUP BY userId) D
+		ON user.userId = D.userId
+		LEFT OUTER JOIN 	  	
+			(SELECT COUNT(*) AS 'couponCount', userId FROM owncoupon GROUP BY userId) E
+		ON user.userId = E.userId
+		WHERE user.userId = #{value}
+	 </select>
+	 
+	 <!-- SQL : SELECT ONE -->
+	 <select 	id="getUserByName"	parameterType="String"	resultMap="userSelectMap">
+		SELECT *
+		FROM user
+		WHERE userName = #{value}
+	 </select>
+	 
+	 <!-- SQL : SELECT ONE -->
+	 <select 	id="getUserByPhone"	parameterType="String"	resultMap="userSelectMap">
+		SELECT *
+		FROM user
+		WHERE phone = #{value}
+	 </select>
+	 
+	 <!-- SQL : UPDATE -->
+	 <update	id="updatePassword"	parameterType="User" >
+	   	UPDATE user
+	   	<set>
+	   		password		= #{password}
+	   	</set>
+	   	WHERE userId = #{userId}
+	 </update>
+
+	<!-- SQL : UPDATE --> 
+ 	<update	id="updateUser"	parameterType="User" >
+	   	UPDATE user
+	   	<set>
+	   		nickname	= #{nickname},
+	   		userAddr	= #{userAddr},
+	   		phone		= #{phone},
+	   		userImg		= #{userImg}
+	   	</set>
+	   	WHERE userId = #{userId}
+	 </update>
+		 
+	 <!-- SQL : UPDATE -->
+	 <update	id="leaveUser"	parameterType="User" >
+	   	UPDATE user
+	   	<set>
+	   		role	= 'leave'
+	   	</set>
+	   	WHERE userId = #{userId}
+	 </update>
+	 
+	 <!-- SQL : UPDATE -->
+	 <update	id="restrictUser"	parameterType="User" >
+	   	UPDATE user
+	   	<set>
+	   		role	= 'restrict'
+	   	</set>
+	   	WHERE userId = #{userId}
+	 </update>
+		 
+	<!-- SQL : SELECT LIST	// blah = 아무의미없는 글자 // 신고횟수 조회때문에 나중에 조인해야함 -->
+	
+	<select  id="getUserList"  parameterType="Search"	resultMap="userSelectMap">				
+	SELECT
+		user.* , COALESCE(B.COUNT,0) AS 'reportedCount'
+		FROM user LEFT OUTER JOIN 	  	
+		(SELECT COUNT(*) COUNT, reportedUser FROM report Group by reportedUser) B 
+		ON user.userId = B.reportedUser;																	
+	</select>
+	
+	<!-- 단위테스트용 쿼리 
+	<select  id="getUserList"  parameterType="Search"	resultMap="userSelectMap">				
+		SELECT
+		@rownum:=@rownum+1 as '번호', user.*
+		FROM user, (SELECT @rownum:=0)a;																		
+	 </select>
+	 -->
+<!-- 	본쿼리
+	<select  id="getUserList"  parameterType="Search"	resultMap="userSelectMap">				
+		SELECT @ROWNUM:=@ROWNUM+1 AS '번호' , inner.*
+		FROM ( SELECT u.* 
+				FROM user u 
+				<where>
+				<if test="searchKeyword != null">
+					userId LIKE CONCAT('%',#{searchKeyword},'%')
+				</if>
+				</where>) inner, (SELECT @ROWNUM:=0)blah
+		WHERE 1=1)																			
+	 </select> 
+-->
+	
+	<!-- SQL : SELECT ROW Count -->
+	 <select  id="getTotalCount"   resultType="int">
+	  	SELECT COUNT(*)						
+	  	FROM user	
+	 </select>
+	 
+	 <!-- SQL : UPDATE recentDate -->
+	 <update id="updateRecentDate" parameterType="User">
+	 	UPDATE user
+	 	<set>
+	 		recentDate	=	CURRENT_TIMESTAMP()
+	 	</set>
+	 	WHERE userId = #{userId}
+	 </update>
+</mapper>

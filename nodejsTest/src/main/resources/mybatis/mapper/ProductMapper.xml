@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  <mapper namespace="ProductMapper"> 가 @Mapper 와 함께 밑의 한줄로 대체 됨-->
+<mapper namespace="com.mvc.forrest.dao.product.ProductDAO"> 	
+ 	
+	<resultMap id="productSelectMap" type="product">
+		<result property="prodNo" 				column="prodNo" 				jdbcType="INTEGER"/>
+		<result property="width"	   			column="width" 				jdbcType="INTEGER" />
+		<result property="length" 			column="LENGTH" 			jdbcType="INTEGER" />
+		<result property="height" 			column="height" 		jdbcType="INTEGER" />
+		<result property="userId" 				column="userId" 					jdbcType="VARCHAR" />
+		<result property="prodCondition" 			column="prodCondition" 			jdbcType="VARCHAR" />
+		<result property="prodQuantity" 				column="prodQuantity" 				jdbcType="INTEGER" />
+		<result property="prodName" 			column="prodName" 				jdbcType="VARCHAR"  />
+		<result property="prodDetail" 				column="prodDetail" 				jdbcType="VARCHAR"  />
+		<result property="isRental" 				column="isRental" 				jdbcType="TINYINT"  />
+		<result property="rentalCounting" 				column="rentalCounting" 				jdbcType="INTEGER"  />
+		<result property="rentalPrice" 				column="rentalPrice" 				jdbcType="INTEGER"  />
+		<result property="account" 				column="ACCOUNT" 				jdbcType="VARCHAR"  />
+		<result property="deposit" 				column="deposit" 				jdbcType="INTEGER"  />
+		<result property="category" 				column="category" 				jdbcType="VARCHAR"  />
+		<result property="divyAddress" 				column="divyAddress" 				jdbcType="VARCHAR"  />
+		<result property="prodImg" 				column="prodImg" 				jdbcType="VARCHAR"  />
+		<result property="recentImg" 				column="recentImg" 				jdbcType="VARCHAR"  />
+		
+		<association property="userProd" javaType="User">
+			<id property="userId" column="userId"  jdbcType="VARCHAR"/>
+			<id property="userImg" column="userImg"  jdbcType="VARCHAR"/>
+			<id property="userRate" column="userRate"  jdbcType="DOUBLE"/>
+			<result property="nickname" 			column="nickname" 			jdbcType="VARCHAR" />
+		</association>
+	</resultMap>
+	
+	<!-- SQL : INSERT -->
+	<insert 	id="addProduct"		parameterType="product" >
+		INSERT 
+	 	INTO product(prodNo, width, LENGTH, height, userId, prodQuantity, prodName, prodDetail,
+	 						 isRental, rentalCounting, rentalPrice, ACCOUNT, deposit, category, divyAddress, prodImg, recentImg)
+	 	values (#{prodNo}, #{width}, #{length}, #{height}, #{userId}, #{prodQuantity}, #{prodName}, #{prodDetail},
+	 	 			#{isRental},#{rentalCounting},#{rentalPrice}, #{account}, #{deposit}, #{category}, #{divyAddress}, #{prodImg}, #{recentImg})
+	 </insert>
+	  
+	 <!-- SQL : SELECT ONE -->
+	 <select 	id="getProduct"	parameterType="int"	resultMap="productSelectMap">
+		SELECT *
+	    FROM product p, user u
+		where p.prodNo =  #{prodNo} and p.userId = u.userId
+	 </select>
+	 
+	 <!-- SQL : UPDATE -->
+	 <update	id="updateProduct"	parameterType="product" >
+	   	update product
+	   	<set>
+	   		prodImg =#{prodImg}, 
+	   		prodName =#{prodName}, 
+	   		category =#{category}, 
+	   		prodDetail =#{prodDetail},  
+	   		divyAddress =#{divyAddress},  
+	   		isRental =#{isRental}, 
+	   		rentalPrice =#{rentalPrice}, 
+	   		deposit =#{deposit},  
+	   		ACCOUNT =#{account} 
+	   	</set>
+	   	where prodNo = #{prodNo}
+	 </update>
+	 
+	  <!-- SQL : UPDATE -->
+	 <update	id="updateProductCondition"	parameterType="product" >
+	   	update product
+	   	<set>
+	   		prodCondition = #{prodCondition}
+	   	</set>
+	   	where prodNo = #{prodNo}
+	 </update>
+		 
+	<!-- SQL : SELECT LIST -->
+	<!-- 대여가능여부가 true이면서 물품상태가 보관중인 물품들의 리스트 -->
+	<select  id="getProductList"  parameterType="search"	resultMap="productSelectMap">
+	  	SELECT * FROM product
+	  	
+	  	<where>
+	  		isRental = 1 and prodCondition = '보관중'
+	  		
+	  		<!-- 검색어와 카테고리를 모두입력한 경우 -->
+	  		<if test="searchKeyword != null and searchCategory != null">
+					and  prodName LIKE CONCAT('%',#{searchKeyword},'%') and category LIKE #{searchCategory}
+	     	</if>
+	  	
+	  		<!-- 검색어만 입력한경우 -->
+	  		<if test="searchKeyword != null and searchCategory == null">
+					and prodName LIKE CONCAT('%',#{searchKeyword},'%')
+	  	    </if>
+	  	
+	  		<!-- 카테고리만 입력한경우 -->
+	  		<if test="searchKeyword == null and searchCategory != null">
+					and 	category LIKE #{searchCategory}
+	  		</if>
+	  	</where>
+	  	
+	  	
+	  	<if test="orderCondition != null">
+	  		<if test='orderCondition == "rentalPriceASC"'>
+			order by rentalPrice ASC
+			</if>
+			<if test='orderCondition == "rentalPriceDESC"'>
+			order by rentalPrice DESC
+			</if>
+			
+			<if test='orderCondition == "prodNoASC"'>
+			order by prodNo ASC
+			</if>			
+			<if test='orderCondition == "prodNoDESC"'>
+			order by prodNo DESC
+			</if>
+			
+			<if test='orderCondition == "rentalCountingASC"'>
+			order by rentalCounting ASC
+			</if>			
+			<if test='orderCondition == "rentalCountingDESC"'>
+			order by rentalCounting DESC
+			</if>
+	  	
+	  	</if>
+	 
+	 </select>
+	 
+	 <!-- SQL : SELECT LIST -->
+	 <!-- 인덱스페이지에 프로덕트리스트를 최신순으로 4개 띄우는 쿼리 -->
+	   <select    id="getProductListForIndex"   resultMap="productSelectMap">
+       SELECT inner_table.* , inner_table.ROWNO
+                    FROM(
+                        SELECT product.*, transaction.paymentDate, ROW_NUMBER() OVER() AS ROWNO
+                        FROM product left outer Join transaction on product.prodNo = transaction.prodNo
+                        where transaction.tranCode = 0
+                        order by transaction.paymentDate DESC )  inner_table
+      WHERE inner_table.ROWNO &lt;= 4         
+    </select>
+
+	
+	<!-- SQL : SELECT ROW Count -->	 
+	 <select  id="getTotalCount"  parameterType="search"	 resultType="int">
+	  	SELECT COUNT(*)
+	  	FROM product
+	  	
+	  	<where>
+	  		isRental = 1 and prodCondition = '보관중'
+	  		<!-- 검색어와 카테고리를 모두입력한 경우 -->
+	  		<if test="searchKeyword != null and searchCategory != null">
+					 and prodName LIKE CONCAT('%',#{searchKeyword},'%') and category LIKE #{searchCategory}
+	     	</if>
+	  	
+	  		<!-- 검색어만 입력한경우 -->
+	  		<if test="searchKeyword != null and searchCategory == null">
+					and prodName LIKE CONCAT('%',#{searchKeyword},'%')
+	  	    </if>
+	  	
+	  		<!-- 카테고리만 입력한경우 -->
+	  		<if test="searchKeyword == null and searchCategory != null">
+					and	category LIKE #{searchCategory}
+	  		</if>
+	  	</where>
+	  	
+	 </select>
+	 
+</mapper>
