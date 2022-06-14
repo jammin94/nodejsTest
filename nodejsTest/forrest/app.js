@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const dotenv = require('dotenv');
 
+//environment set
 dotenv.config();
 const webSocket = require('./socket');
 
